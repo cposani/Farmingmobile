@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+{% load static %}
+{% block content %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+<style>
+  .shop-card { background: #fff; border-radius: 10px; padding: 15px; margin-bottom: 15px;
+               box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
+  .shop-card h5 { color: #2e7d32; margin-bottom: 8px; }
+  .shop-hours ul { padding-left: 0; }
+  .shop-hours li { list-style: none; }
+  .shop-hours li.fw-bold { background: #f1f8f4; padding: 2px 6px; border-radius: 4px; }
+</style>
+
+<div class="text-center mb-4">
+  <h2>🛒 Nearby Shops</h2>
+  <p class="text-muted">Find shops near your farms with distance filters and map view</p>
+</div>
+
+<!-- Filters -->
+<form method="get" class="filters d-flex flex-wrap justify-content-center gap-2 mb-3">
+  <select name="farm_id" required>
+    <option value="">Select Farm</option>
+    {% for f in farms %}
+      <option value="{{ f.id }}" {% if farm and f.id == farm.id %}selected{% endif %}>
+        {{ f.name }} ({{ f.city }})
+      </option>
+    {% endfor %}
+  </select>
+
+  <select name="radius">
+    {% for r in radius_options %}
+      <option value="{{ r }}" {% if radius == r %}selected{% endif %}>Within {{ r }} km</option>
+    {% endfor %}
+  </select>
+
+  <button type="submit" class="btn btn-success">Search</button>
+</form>
+
+<!-- Map -->
+{% if farm %}
+  <div id="map" style="height:400px; border-radius:12px; margin-bottom:30px;"></div>
+{% endif %}
+
+<!-- Results -->
+{% if shops %}
+  <h4 class="mb-3">Found {{ shops|length }} shop(s) within {{ radius }} km of {{ farm.name }}</h4>
+ {% for shop in shops %}
+  <div class="shop-card">
+    <h5>🏪 {{ shop.name }}</h5>
+    <p>📍 {{ shop.address }}, {{ shop.city }}</p>
+    {% if shop.contact_number %}
+      <p>📞 {{ shop.contact_number }}</p>
+    {% endif %}
+    <p>
+      🚗 <span class="badge bg-success">{{ shop.distance_km }} km</span>
+      ⏱️ <span class="badge bg-info text-dark">{{ shop.eta_text }}</span>
+    </p>
+
+    <!-- Hours (Google Maps style) -->
+  <div class="shop-hours">
+    <h6>🕒 Hours</h6>
+    <ul class="list-unstyled">
+      <li>Monday: {{ shop.monday_hours|default:"Closed" }}</li>
+      <li>Tuesday: {{ shop.tuesday_hours|default:"Closed" }}</li>
+      <li>Wednesday: {{ shop.wednesday_hours|default:"Closed" }}</li>
+      <li>Thursday: {{ shop.thursday_hours|default:"Closed" }}</li>
+      <li>Friday: {{ shop.friday_hours|default:"Closed" }}</li>
+      <li>Saturday: {{ shop.saturday_hours|default:"Closed" }}</li>
+      <li>Sunday: {{ shop.sunday_hours|default:"Closed" }}</li>
+    </ul>
+  </div>
+
+
+    <a href="https://www.google.com/maps/dir/?api=1&destination={{ shop.latitude }},{{ shop.longitude }}" 
+       target="_blank" class="btn btn-outline-primary btn-sm mt-2">Get Directions</a>
+  </div>
+{% endfor %}
+
+{% elif farm %}
+  <p class="text-muted">No shops found within {{ radius }} km of {{ farm.name }}.</p>
+{% endif %}
+
+<!-- Map Script -->
+{% if farm %}
+<script>
+  var map = L.map('map').setView([{{ farm.latitude|default:"0" }}, {{ farm.longitude|default:"0" }}], 12);
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; OpenStreetMap contributors'
+  }).addTo(map);
+
+  // Farm marker
+  L.marker([{{ farm.latitude|default:"0" }}, {{ farm.longitude|default:"0" }}])
+    .addTo(map)
+    .bindPopup("🌱 {{ farm.name }} (Your Farm)");
+
+  // Shop markers
+  {% for shop in shops %}
+    L.marker([{{ shop.latitude|default:"0" }}, {{ shop.longitude|default:"0" }}])
+      .addTo(map)
+      .bindPopup(`
+        🏪 {{ shop.name }}<br>
+        📍 {{ shop.address }}<br>
+        🚗 {{ shop.distance_km }} km, ⏱️ {{ shop.eta_minutes }} min
+      `);
+  {% endfor %}
+</script>
+{% endif %}
+
+<div class="text-center mt-4">
+  <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary">🔙 Back to Dashboard</a>
+</div>
+{% endblock %}

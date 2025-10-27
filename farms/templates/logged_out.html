@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-center align-items-center" style="min-height:70vh;">
+  <div class="shadow-sm bg-white rounded p-5 text-center" style="max-width:500px;">
+    <h2 class="text-success mb-3">🔒 You’ve been logged out</h2>
+    <p class="lead">Thanks for visiting <strong>Organic Farming</strong>. Come back soon!</p>
+    <a href="{% url 'login' %}" class="btn btn-success mt-3">🔑 Login Again</a>
+  </div>
+</div>
+{% endblock %}

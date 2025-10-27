@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+{% block content %}
+<h1>Select a Farm</h1>
+<p>Choose one of your farms to view nearby shops:</p>
+<ul style="list-style: none; padding: 0;">
+  {% for farm in farms %}
+    <li style="margin-bottom: 1rem; padding: 1rem; border: 1px solid #ccc; border-radius: 6px;">
+      <strong>{{ farm.name }}</strong><br>
+      <a href="{% url 'nearby_shops' farm.id %}" class="btn">View Nearby Shops</a>
+    </li>
+  {% empty %}
+    <li>You haven't registered any farms yet.</li>
+  {% endfor %}
+</ul>
+{% endblock %}
