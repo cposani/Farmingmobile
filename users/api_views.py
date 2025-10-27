@@ -35,6 +35,9 @@ User = get_user_model()
 def generate_otp():
     return f"{random.randint(100000, 999999)}"
 
+
+from core.utils.email import send_email
+
 class RegisterAPI(APIView):
     permission_classes = [permissions.AllowAny]
 
@@ -68,7 +71,8 @@ class RegisterAPI(APIView):
                     f"This code expires in {getattr(settings, 'OTP_TTL_MINUTES', 5)} minutes.\n\n"
                     f"Enter this code in the app to activate your account."
                 )
-                send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [existing.email])
+                # send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [existing.email])
+                send_email(existing.email, subject, message)
                 return Response({"message": "OTP re-sent to email."}, status=status.HTTP_200_OK)
 
         # Case 2: New user registration
@@ -104,8 +108,8 @@ class RegisterAPI(APIView):
             f"This code expires in {getattr(settings, 'OTP_TTL_MINUTES', 5)} minutes.\n\n"
             f"Enter this code in the app to activate your account."
         )
-        send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [user.email])
-
+        # send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [user.email])
+        send_email(user.email, subject, message)
         return Response({"message": "User created. OTP sent to email."}, status=status.HTTP_201_CREATED)
 
     
@@ -229,8 +233,9 @@ def send_otp_email(user, code, subject_prefix="Password"):
         f"This code expires in {getattr(settings, 'OTP_TTL_MINUTES', 5)} minutes.\n\n"
         f"If you didn't request this, you can ignore this email."
     )
-    send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [user.email], fail_silently=False)
-
+    # send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [user.email], fail_silently=False)
+    send_email(user.email, subject, message)
+    
 class RequestOTPAPI(APIView):
     permission_classes = [permissions.AllowAny]
 
