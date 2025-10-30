@@ -28,5 +28,6 @@ urlpatterns = [
     # 🔌 API views
     path('api/', include('farms.api_urls')),
     path('api/', include('users.api_urls')),
+    path('api/', include('shops.api_urls')),
 ]
 
