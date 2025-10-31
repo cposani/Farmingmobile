@@ -188,33 +188,34 @@ LOGGING = {
 
 
 
+import os
 import logging
-from django.core.files.storage import default_storage
-
-if os.getenv("DJANGO_ENV") == "production":
-    # ✅ Force Cloudinary in production
-    DEFAULT_FILE_STORAGE = "cloudinary_storage.storage.MediaCloudinaryStorage"
-
-    CLOUDINARY_STORAGE = {
-        "CLOUD_NAME": os.getenv("CLOUDINARY_CLOUD_NAME"),
-        "API_KEY": os.getenv("CLOUDINARY_API_KEY"),
-        "API_SECRET": os.getenv("CLOUDINARY_API_SECRET"),
-    }
-
-    logging.warning(">>> Cloudinary block executed")
-    logging.warning(f"DJANGO_ENV={os.getenv('DJANGO_ENV')}")
-    logging.warning(f"CLOUDINARY_CLOUD_NAME={os.getenv('CLOUDINARY_CLOUD_NAME')}")
-else:
-    # ✅ Local dev fallback
-    MEDIA_URL = "/media/"
-    MEDIA_ROOT = BASE_DIR / "media"
-
-    logging.warning(">>> Local media block executed")
-    logging.warning(f"DJANGO_ENV={os.getenv('DJANGO_ENV')}")
+from django.core.exceptions import ImproperlyConfigured
 
 # -------------------------
-# Debug what storage is actually active
+# MEDIA / STORAGE
 # -------------------------
-logging.warning(f"Storage backend in use: {default_storage.__class__.__name__}")
+
+cloud_name = os.getenv("CLOUDINARY_CLOUD_NAME")
+api_key = os.getenv("CLOUDINARY_API_KEY")
+api_secret = os.getenv("CLOUDINARY_API_SECRET")
+
+if not cloud_name or not api_key or not api_secret:
+    raise ImproperlyConfigured(
+        "❌ Cloudinary credentials are missing! "
+        "Please set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET."
+    )
+
+DEFAULT_FILE_STORAGE = "cloudinary_storage.storage.MediaCloudinaryStorage"
+
+CLOUDINARY_STORAGE = {
+    "CLOUD_NAME": cloud_name,
+    "API_KEY": api_key,
+    "API_SECRET": api_secret,
+}
+
+logging.warning(">>> Cloudinary storage configured successfully")
+logging.warning(f"CLOUDINARY_CLOUD_NAME={cloud_name}")
+
 
 
