@@ -186,23 +186,35 @@ LOGGING = {
     "root": {"handlers": ["console"], "level": "DEBUG" if DEBUG else "INFO"},
 }
 
-if os.getenv("DJANGO_ENV") == "production":
-    DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
 
-    CLOUDINARY_STORAGE = {
-        'CLOUD_NAME': os.getenv('CLOUDINARY_CLOUD_NAME'),
-        'API_KEY': os.getenv('CLOUDINARY_API_KEY'),
-        'API_SECRET': os.getenv('CLOUDINARY_API_SECRET'),
-    }
-else:
-    MEDIA_URL = "/media/"
-    MEDIA_ROOT = BASE_DIR / "media"
 
 import logging
 from django.core.files.storage import default_storage
 
-logging.warning(f"DJANGO_ENV={os.getenv('DJANGO_ENV')}")
-logging.warning(f"CLOUDINARY_CLOUD_NAME={os.getenv('CLOUDINARY_CLOUD_NAME')}")
+if os.getenv("DJANGO_ENV") == "production":
+    # ✅ Force Cloudinary in production
+    DEFAULT_FILE_STORAGE = "cloudinary_storage.storage.MediaCloudinaryStorage"
+
+    CLOUDINARY_STORAGE = {
+        "CLOUD_NAME": os.getenv("CLOUDINARY_CLOUD_NAME"),
+        "API_KEY": os.getenv("CLOUDINARY_API_KEY"),
+        "API_SECRET": os.getenv("CLOUDINARY_API_SECRET"),
+    }
+
+    logging.warning(">>> Cloudinary block executed")
+    logging.warning(f"DJANGO_ENV={os.getenv('DJANGO_ENV')}")
+    logging.warning(f"CLOUDINARY_CLOUD_NAME={os.getenv('CLOUDINARY_CLOUD_NAME')}")
+else:
+    # ✅ Local dev fallback
+    MEDIA_URL = "/media/"
+    MEDIA_ROOT = BASE_DIR / "media"
+
+    logging.warning(">>> Local media block executed")
+    logging.warning(f"DJANGO_ENV={os.getenv('DJANGO_ENV')}")
+
+# -------------------------
+# Debug what storage is actually active
+# -------------------------
 logging.warning(f"Storage backend in use: {default_storage.__class__.__name__}")
 
 
