@@ -44,6 +44,8 @@ class ProductDetailView(generics.RetrieveAPIView):
     def get_queryset(self):
         return Product.objects.all()
 
+import logging
+from django.core.files.storage import default_storage
 from rest_framework.parsers import MultiPartParser, FormParser
 # ✅ Create product (user → pending, admin → approved)
 class ProductCreateView(generics.CreateAPIView):
@@ -53,6 +55,7 @@ class ProductCreateView(generics.CreateAPIView):
     def get_serializer_context(self):
         context = super().get_serializer_context()
         context.update({"request": self.request})
+        logging.warning(f"Using storage backend: {default_storage.__class__.__name__}")
         return context
 
 
