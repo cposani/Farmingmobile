@@ -86,6 +86,36 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "core.wsgi.application"
 
+
+import os
+import logging
+from django.core.exceptions import ImproperlyConfigured
+
+# -------------------------
+# MEDIA / STORAGE
+# -------------------------
+
+cloud_name = os.getenv("CLOUDINARY_CLOUD_NAME")
+api_key = os.getenv("CLOUDINARY_API_KEY")
+api_secret = os.getenv("CLOUDINARY_API_SECRET")
+
+if not cloud_name or not api_key or not api_secret:
+    raise ImproperlyConfigured(
+        "❌ Cloudinary credentials are missing! "
+        "Please set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET."
+    )
+
+DEFAULT_FILE_STORAGE = "cloudinary_storage.storage.MediaCloudinaryStorage"
+
+CLOUDINARY_STORAGE = {
+    "CLOUD_NAME": cloud_name,
+    "API_KEY": api_key,
+    "API_SECRET": api_secret,
+}
+
+logging.warning(">>> Cloudinary storage configured successfully")
+logging.warning(f"CLOUDINARY_CLOUD_NAME={cloud_name}")
+
 # -------------------------
 # DATABASE (Neon via DATABASE_URL)
 # -------------------------
@@ -188,34 +218,7 @@ LOGGING = {
 
 
 
-import os
-import logging
-from django.core.exceptions import ImproperlyConfigured
 
-# -------------------------
-# MEDIA / STORAGE
-# -------------------------
-
-cloud_name = os.getenv("CLOUDINARY_CLOUD_NAME")
-api_key = os.getenv("CLOUDINARY_API_KEY")
-api_secret = os.getenv("CLOUDINARY_API_SECRET")
-
-if not cloud_name or not api_key or not api_secret:
-    raise ImproperlyConfigured(
-        "❌ Cloudinary credentials are missing! "
-        "Please set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET."
-    )
-
-DEFAULT_FILE_STORAGE = "cloudinary_storage.storage.MediaCloudinaryStorage"
-
-CLOUDINARY_STORAGE = {
-    "CLOUD_NAME": cloud_name,
-    "API_KEY": api_key,
-    "API_SECRET": api_secret,
-}
-
-logging.warning(">>> Cloudinary storage configured successfully")
-logging.warning(f"CLOUDINARY_CLOUD_NAME={cloud_name}")
 
 
 
