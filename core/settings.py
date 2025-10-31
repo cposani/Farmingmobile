@@ -202,7 +202,7 @@ import logging
 from django.core.files.storage import default_storage
 
 logging.warning(f"DJANGO_ENV={os.getenv('DJANGO_ENV')}")
-logging.warning(f"DEFAULT_FILE_STORAGE={DEFAULT_FILE_STORAGE}")
 logging.warning(f"CLOUDINARY_CLOUD_NAME={os.getenv('CLOUDINARY_CLOUD_NAME')}")
 logging.warning(f"Storage backend in use: {default_storage.__class__.__name__}")
+
 
