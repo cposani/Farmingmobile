@@ -157,7 +157,52 @@ from rest_framework import status, permissions
 from rest_framework.authtoken.models import Token
 from django.contrib.auth.models import User
 from .models import Profile
+# login using authtoken
+# class LoginAPI(APIView):
+#     permission_classes = [permissions.AllowAny]
 
+#     def post(self, request):
+#         email = request.data.get("email")
+#         phone = request.data.get("phone")
+#         password = request.data.get("password")
+
+#         if not password or (not email and not phone):
+#             return Response({"error": "Email/Phone and password required"}, status=status.HTTP_400_BAD_REQUEST)
+
+#         user = None
+#         if email:
+#             user = User.objects.filter(email__iexact=email).first()
+#         elif phone:
+#             profile = Profile.objects.filter(phone=phone).first()
+#             if profile:
+#                 user = profile.user
+
+#         if not user:
+#             return Response({"error": "Invalid credentials"}, status=status.HTTP_400_BAD_REQUEST)
+
+#         user = authenticate(username=user.username, password=password)
+#         if not user:
+#             return Response({"error": "Invalid credentials"}, status=status.HTTP_400_BAD_REQUEST)
+#         if not user.is_active:
+#             return Response({"error": "Account not activated"}, status=status.HTTP_403_FORBIDDEN)
+
+#         # Return token
+#         token, _ = Token.objects.get_or_create(user=user)
+#         return Response({
+#             "message": "Login successful",
+#             "token": token.key,
+#             "user": {
+#                 "id": user.id,
+#                 "first_name": user.first_name,
+#                 "last_name": user.last_name,
+#                 "email": user.email,
+#                 "phone": user.profile.phone,
+#                 "user": UserSerializer(user).data,
+#             }
+#         })
+#------------
+#login using JWT
+from rest_framework_simplejwt.tokens import RefreshToken
 class LoginAPI(APIView):
     permission_classes = [permissions.AllowAny]
 
@@ -187,10 +232,12 @@ class LoginAPI(APIView):
             return Response({"error": "Account not activated"}, status=status.HTTP_403_FORBIDDEN)
 
         # Return token
-        token, _ = Token.objects.get_or_create(user=user)
+        refresh = RefreshToken.for_user(user)
+        access = str(refresh.access_token)
         return Response({
             "message": "Login successful",
-            "token": token.key,
+            "access": access,
+            "refresh": str(refresh),
             "user": {
                 "id": user.id,
                 "first_name": user.first_name,
@@ -200,6 +247,7 @@ class LoginAPI(APIView):
                 "user": UserSerializer(user).data,
             }
         })
+
 
 # users/api_views.py
 import random
