@@ -348,20 +348,29 @@ class VerifyOTPAPI(APIView):
         temp_token = f"otp-{latest.id}"
         return Response({"message": "OTP verified", "otp_token": temp_token}, status=status.HTTP_200_OK)
 
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status, permissions
+from django.utils import timezone
+from datetime import timedelta
+from django.contrib.auth import get_user_model
+from .models import PasswordResetOTP  # adjust import to your app
+
+User = get_user_model()
+
 class ResetPasswordAPI(APIView):
     permission_classes = [permissions.AllowAny]
 
     def post(self, request):
         email = request.data.get("email")
         new_password = request.data.get("new_password")
-        otp_token = request.data.get("otp_token")
+        otp_code = request.data.get("otp_token")  # frontend sends the numeric OTP
 
-        if not email or not new_password or not otp_token:
-            return Response({"error": "Email, new_password, and otp_token required"}, status=status.HTTP_400_BAD_REQUEST)
-
-        # Validate token structure
-        if not otp_token.startswith("otp-"):
-            return Response({"error": "Invalid token"}, status=status.HTTP_400_BAD_REQUEST)
+        if not email or not new_password or not otp_code:
+            return Response(
+                {"error": "Email, new_password, and otp_token required"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         try:
             user = User.objects.get(email__iexact=email)
@@ -369,25 +378,30 @@ class ResetPasswordAPI(APIView):
             return Response({"error": "Invalid request"}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            otp_id = int(otp_token.split("-")[1])
-            otp_obj = PasswordResetOTP.objects.get(id=otp_id, user=user, purpose="password_reset")
-        except (ValueError, PasswordResetOTP.DoesNotExist):
+            otp_obj = PasswordResetOTP.objects.get(
+                code=otp_code, user=user, purpose="password_reset"
+            )
+        except PasswordResetOTP.DoesNotExist:
             return Response({"error": "Invalid token"}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Enforce short window post-verification (e.g., 10 minutes from creation)
-        # and ensure it was marked used in Verify step.
-        if not otp_obj.used:
-            return Response({"error": "OTP not verified"}, status=status.HTTP_400_BAD_REQUEST)
-
-        ttl_after_verify_minutes = 10
-        if timezone.now() > otp_obj.created_at + timedelta(minutes=ttl_after_verify_minutes):
+        # Check expiry (10 minutes from creation)
+        if timezone.now() > otp_obj.created_at + timedelta(minutes=10):
             return Response({"error": "Token expired"}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Basic password policy (you can align with front-end policy)
+        # Basic password policy
         if len(new_password) < 8:
-            return Response({"error": "Password must be at least 8 characters"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"error": "Password must be at least 8 characters"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
+        # ✅ Reset password
         user.set_password(new_password)
         user.save()
 
+        # Mark OTP as used
+        otp_obj.used = True
+        otp_obj.save()
+
         return Response({"message": "Password reset successful"}, status=status.HTTP_200_OK)
+
