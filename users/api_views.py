@@ -314,12 +314,15 @@ class RequestOTPAPI(APIView):
 
         return Response({"message": "If an account exists, an OTP has been sent."}, status=status.HTTP_200_OK)
 
+from .utils import generate_temp_token
+
 class VerifyOTPAPI(APIView):
     permission_classes = [permissions.AllowAny]
 
     def post(self, request):
         email = request.data.get("email")
         otp = request.data.get("otp")
+
         if not email or not otp:
             return Response({"error": "Email and OTP required"}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -339,24 +342,13 @@ class VerifyOTPAPI(APIView):
         if not latest.is_valid(ttl_minutes=ttl):
             return Response({"error": "OTP expired"}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Mark as used, and issue a temporary verification token (short-lived)
-        latest.used = True
-        latest.save()
-
-        # For simplicity, return a short-lived token derived from the OTP record id.
-        # In production, prefer signing with its timestamp for expiry.
-        temp_token = f"otp-{latest.id}"
+        # ✅ Don’t mark as used yet — only after reset succeeds
+        temp_token = generate_temp_token(latest.id, ttl_minutes=10)
         return Response({"message": "OTP verified", "otp_token": temp_token}, status=status.HTTP_200_OK)
 
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework import status, permissions
-from django.utils import timezone
+from .utils import verify_temp_token
 from datetime import timedelta
-from django.contrib.auth import get_user_model
-from .models import PasswordResetOTP  # adjust import to your app
-
-User = get_user_model()
+from django.utils import timezone
 
 class ResetPasswordAPI(APIView):
     permission_classes = [permissions.AllowAny]
@@ -364,44 +356,36 @@ class ResetPasswordAPI(APIView):
     def post(self, request):
         email = request.data.get("email")
         new_password = request.data.get("new_password")
-        otp_code = request.data.get("otp_token")  # frontend sends the numeric OTP
+        temp_token = request.data.get("otp_token")
 
-        if not email or not new_password or not otp_code:
-            return Response(
-                {"error": "Email, new_password, and otp_token required"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+        if not email or not new_password or not temp_token:
+            return Response({"error": "Email, new_password, and otp_token required"}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             user = User.objects.get(email__iexact=email)
         except User.DoesNotExist:
             return Response({"error": "Invalid request"}, status=status.HTTP_400_BAD_REQUEST)
 
+        otp_id = verify_temp_token(temp_token, ttl_minutes=10)
+        if not otp_id:
+            return Response({"error": "Invalid or expired token"}, status=status.HTTP_400_BAD_REQUEST)
+
         try:
-            otp_obj = PasswordResetOTP.objects.get(
-                code=otp_code, user=user, purpose="password_reset"
-            )
+            otp_obj = PasswordResetOTP.objects.get(id=otp_id, user=user, purpose="password_reset", used=False)
         except PasswordResetOTP.DoesNotExist:
             return Response({"error": "Invalid token"}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Check expiry (10 minutes from creation)
-        if timezone.now() > otp_obj.created_at + timedelta(minutes=10):
-            return Response({"error": "Token expired"}, status=status.HTTP_400_BAD_REQUEST)
-
-        # Basic password policy
-        if len(new_password) < 8:
-            return Response(
-                {"error": "Password must be at least 8 characters"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
         # ✅ Reset password
+        if len(new_password) < 8:
+            return Response({"error": "Password must be at least 8 characters"}, status=status.HTTP_400_BAD_REQUEST)
+
         user.set_password(new_password)
         user.save()
 
-        # Mark OTP as used
+        # Mark OTP as used only after success
         otp_obj.used = True
         otp_obj.save()
 
         return Response({"message": "Password reset successful"}, status=status.HTTP_200_OK)
+
 
