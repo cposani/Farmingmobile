@@ -21,7 +21,7 @@ class ProductListView(generics.ListAPIView):
     serializer_class = ProductSerializer
     permission_classes = [permissions.AllowAny]
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
-    search_fields = ["name", "description", "location", "seller__username"]
+    search_fields = ["name", "description", "location", "seller__username","seller_name"]
     ordering_fields = ["price", "created_at"]
     ordering = ["-created_at"]
 
@@ -57,12 +57,7 @@ class ProductCreateView(generics.CreateAPIView):
         context.update({"request": self.request})
         logging.warning(f"Using storage backend: {default_storage.__class__.__name__}")
         return context
-
-
     
-
-
-
 # ✅ Update product (user: only pending/rejected; admin: any)
 class ProductUpdateView(generics.UpdateAPIView):
     serializer_class = ProductSerializer

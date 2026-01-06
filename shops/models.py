@@ -7,6 +7,7 @@ from django.contrib.auth.models import User
 # market/models.py
 from django.db import models
 from django.contrib.auth import get_user_model
+from django.core.validators import RegexValidator
 
 User = get_user_model()
 
@@ -19,12 +20,25 @@ class Product(models.Model):
     name = models.CharField(max_length=120)
     description = models.TextField()
     price = models.DecimalField(max_digits=10, decimal_places=2)
-    contact = models.CharField(max_length=100)
     location = models.CharField(max_length=120)
+    latitude = models.FloatField(null=True, blank=True)
+    longitude = models.FloatField(null=True, blank=True)
+
+    contact = models.CharField(
+        max_length=20,
+        validators=[
+            RegexValidator(
+                regex=r'^\+?\d{7,15}$',
+                message="Contact number must be digits only (7–15 digits, optional +).",
+                code="invalid_contact"
+            )
+        ],
+        help_text="Enter a valid phone number (digits only, optional leading +)."
+    )
 
     # ✅ Image upload
     image = models.ImageField(upload_to="products/", null=True, blank=True)
-
+    seller_name=models.CharField(max_length=50,blank=True,null=True)
     seller = models.ForeignKey(User, on_delete=models.CASCADE, related_name="products")
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
     approved_by = models.ForeignKey(

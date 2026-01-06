@@ -7,7 +7,7 @@ from .models import Shop, RequestedShop
 from .models import Product
 
 class ProductSerializer(serializers.ModelSerializer):
-    seller_name = serializers.CharField(source="seller.username", read_only=True)
+    seller_username = serializers.CharField(source="seller.username", read_only=True)
     approved_by_name = serializers.CharField(source="approved_by.username", read_only=True)
     image = serializers.ImageField(use_url=True, required=False, allow_null=True)
 
@@ -15,11 +15,11 @@ class ProductSerializer(serializers.ModelSerializer):
         model = Product
         fields = [
             "id", "name", "description", "price", "contact", "location", "image",
-            "status", "seller", "seller_name", "approved_by", "approved_by_name",
-            "created_at", "updated_at",
+            "status", "seller", "seller_name", "seller_username", "approved_by", "approved_by_name",
+            "created_at", "updated_at","latitude", "longitude",
         ]
         read_only_fields = [
-            "id", "status", "seller", "seller_name", "approved_by", "approved_by_name",
+            "id", "status", "seller", "seller_username", "approved_by", "approved_by_name",
             "created_at", "updated_at",
         ]
 
