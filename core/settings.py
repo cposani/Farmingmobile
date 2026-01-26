@@ -81,7 +81,6 @@ INSTALLED_APPS = [
     "whitenoise.runserver_nostatic",
 
     # Local apps
-    "farms",
     "shops",
     "users.apps.UsersConfig",
 ]
