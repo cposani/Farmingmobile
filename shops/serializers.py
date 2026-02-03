@@ -45,11 +45,11 @@ class ProductSerializer(serializers.ModelSerializer):
         # Normalize: remove spaces
         raw = value.replace(" ", "")
 
-        if not raw.startswith("+"):
-            raise serializers.ValidationError("Phone number must start with + (country code).")
+        if not raw.startswith("+91"):
+            raise serializers.ValidationError("Phone number must start with + (91).")
 
-        if not re.fullmatch(r"\+\d{7,13}", raw):
-            raise serializers.ValidationError("Invalid phone number format. Use + and 7–13 digits.")
+        if not re.fullmatch(r"\+91\d{10}", raw):
+            raise serializers.ValidationError("Phone must be +91 followed by exactly 10 digits.")
 
         # Country-specific rule for India
         if raw.startswith("+91") and len(raw) != 13:
@@ -67,3 +67,28 @@ class ProductSerializer(serializers.ModelSerializer):
             validated_data["status"] = Product.Status.PENDING
             validated_data["approved_by"] = None
         return super().create(validated_data)
+# serializers.py
+
+from rest_framework import serializers
+from .models import SavedProduct, Product  # adjust imports
+
+class ProductMiniSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Product
+        fields = [
+            "id",
+            "name",
+            "description",
+            "price",
+            "image",
+            "location",
+            "created_at",
+            # add other fields you need
+        ]
+
+class SavedProductSerializer(serializers.ModelSerializer):
+    product = ProductSerializer(read_only=True)
+
+    class Meta:
+        model = SavedProduct
+        fields = ["id", "product", "created_at"]

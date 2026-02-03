@@ -17,8 +17,7 @@ from .api_views import (
     ProductListView, ProductDetailView, ProductCreateView, ProductUpdateView,
     ProductPendingListView, ProductRejectedListView,
     ProductApproveView, ProductRejectView, ProductResubmitView,
-    ProductDeleteView, MyProductsView,AdminMyProductsView
-)
+    ProductDeleteView, MyProductsView,AdminMyProductsView,SavedProductListView, SavedProductToggleView)
 
 urlpatterns = [
     # Public
@@ -26,6 +25,8 @@ urlpatterns = [
     path("products/detail/<int:id>/", ProductDetailView.as_view(), name="product-detail"),
 
     # User actions
+    path("saved/list/", SavedProductListView.as_view(), name="saved-list"), 
+    path("saved/toggle/", SavedProductToggleView.as_view(), name="saved-toggle"),
     path("products/create/", ProductCreateView.as_view(), name="product-create"),
     path("products/update/<int:id>/", ProductUpdateView.as_view(), name="product-update"),
     path("products/resubmit/<int:id>/", ProductResubmitView.as_view(), name="product-resubmit"),

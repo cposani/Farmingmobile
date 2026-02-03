@@ -178,23 +178,49 @@ class MyProductsView(generics.ListAPIView):
         return Product.objects.filter(seller=self.request.user).order_by("-created_at")
 
 
-    
-# class ShopCreateView(generics.CreateAPIView):
-#     queryset = Shop.objects.all()
-#     serializer_class = ShopSerializer
-#     permission_classes = [permissions.IsAdminUser]
+from rest_framework import status, permissions
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
-#     def perform_create(self, serializer):
-#         address = self.request.data.get('address')
-#         lat, lon = geocode_address(address)
-#         serializer.save(latitude=lat, longitude=lon)
+from .models import SavedProduct, Product
+from .serializers import SavedProductSerializer
 
-        
-# class ShopListView(generics.ListAPIView):
-#     queryset = Shop.objects.all()
-#     serializer_class = ShopSerializer
+class SavedProductListView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
 
-# class ShopDetailView(generics.RetrieveAPIView):
-#     queryset = Shop.objects.all()
-#     serializer_class = ShopSerializer
-#     lookup_field = 'id'
+    def get(self, request):
+        qs = SavedProduct.objects.filter(user=request.user).select_related("product")
+        serializer = SavedProductSerializer(qs, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class SavedProductToggleView(APIView):
+    """
+    POST with {"product_id": 123}
+    If not saved -> create
+    If already saved -> delete
+    Returns {"saved": true/false}
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        product_id = request.data.get("product_id")
+        if not product_id:
+            return Response({"detail": "product_id is required"}, status=400)
+
+        try:
+            product = Product.objects.get(id=product_id)
+        except Product.DoesNotExist:
+            return Response({"detail": "Product not found"}, status=404)
+
+        saved_obj, created = SavedProduct.objects.get_or_create(
+            user=request.user,
+            product=product,
+        )
+
+        if not created:
+            # already existed -> remove
+            saved_obj.delete()
+            return Response({"saved": False}, status=200)
+
+        return Response({"saved": True}, status=201)

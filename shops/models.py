@@ -28,12 +28,12 @@ class Product(models.Model):
         max_length=20,
         validators=[
             RegexValidator(
-                regex=r'^\+?\d{7,13}$',
-                message="Contact number must be digits only (7–13 digits, optional +).",
+                regex=r'^\+91\d{10}$',
+                message="Contact number must be in the format +91 followed by 10 digits.",
                 code="invalid_contact"
             )
         ],
-        help_text="Enter a valid phone number (digits only, optional leading +)."
+        help_text="Enter a valid phone number: +91 followed by 10 digits.",
     )
 
     # ✅ Image upload
@@ -51,8 +51,29 @@ class Product(models.Model):
     def __str__(self):
         return f"{self.name} ({self.status})"
 
+from django.conf import settings
+from django.db import models
+from .models import Product  # adjust import if Product is elsewhere
 
+class SavedProduct(models.Model):
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="saved_products"
+    )
+    product = models.ForeignKey(
+        Product,
+        on_delete=models.CASCADE,
+        related_name="saved_by_users"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
 
+    class Meta:
+        unique_together = ("user", "product")
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.user} saved {self.product}"
 
 
 
