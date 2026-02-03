@@ -389,19 +389,4 @@ class ResetPasswordAPI(APIView):
         return Response({"message": "Password reset successful"}, status=status.HTTP_200_OK)
 
 
-from django.contrib.auth import get_user_model
-from django.http import HttpResponse
-
-def create_admin(request):
-    User = get_user_model()
-
-    if User.objects.filter(username="admin").exists():
-        return HttpResponse("Admin already exists")
-
-    User.objects.create_superuser(
-        username="natural@7",
-        email="charithaposani@gmail.com",
-        password="Harekrishna@7"
-    )
-    return HttpResponse("Admin created successfully")
 

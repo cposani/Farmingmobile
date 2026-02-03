@@ -18,7 +18,7 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 from django.contrib.auth import views as auth_views
-from users.api_views import create_admin
+from .temp_admin import create_admin
 urlpatterns = [
     
 
