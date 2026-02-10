@@ -11,7 +11,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.shortcuts import get_object_or_404
 
-from .models import Product
+from .models import Product,ProductImage
 from .serializers import ProductSerializer
 from rest_framework import filters
 
@@ -57,6 +57,10 @@ class ProductCreateView(generics.CreateAPIView):
         context.update({"request": self.request})
         logging.warning(f"Using storage backend: {default_storage.__class__.__name__}")
         return context
+    def perform_create(self, serializer): 
+        product = serializer.save() # ⭐ Save multiple uploaded images 
+        for img in self.request.FILES.getlist("images"): 
+            ProductImage.objects.create(product=product, image=img)
     
 # ✅ Update product (user: only pending/rejected; admin: any)
 class ProductUpdateView(generics.UpdateAPIView):
@@ -224,3 +228,75 @@ class SavedProductToggleView(APIView):
             return Response({"saved": False}, status=200)
 
         return Response({"saved": True}, status=201)
+
+
+from rest_framework import generics, permissions, status
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
+from .models import Product, RecentlyViewed
+from .serializers import RecentlyViewedSerializer, ProductListSerializer
+
+
+class RecentlyViewedListView(generics.ListAPIView):
+    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = RecentlyViewedSerializer
+
+    def get_queryset(self):
+        return RecentlyViewed.objects.filter(user=self.request.user).select_related("product")[:10]
+
+
+# class AddRecentlyViewedView(APIView):
+#     permission_classes = [permissions.IsAuthenticated]
+
+#     def post(self, request, *args, **kwargs):
+#         product_id = request.data.get("product_id")
+#         if not product_id:
+#             return Response({"detail": "product_id is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+#         try:
+#             product = Product.objects.get(id=product_id, status=Product.Status.APPROVED)
+#         except Product.DoesNotExist:
+#             return Response({"detail": "Product not found"}, status=status.HTTP_404_NOT_FOUND)
+
+#         obj, created = RecentlyViewed.objects.update_or_create(
+#             user=request.user,
+#             product=product,
+#             defaults={},
+#         )
+
+#         return Response({"detail": "Recorded"}, status=status.HTTP_200_OK)
+from django.utils import timezone
+
+from django.utils import timezone
+
+class AddRecentlyViewedView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        product_id = request.data.get("product_id")
+        if not product_id:
+            return Response({"detail": "product_id is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            product = Product.objects.get(id=product_id, status=Product.Status.APPROVED)
+        except Product.DoesNotExist:
+            return Response({"detail": "Product not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        obj, created = RecentlyViewed.objects.update_or_create(
+            user=request.user,
+            product=product,
+            defaults={"viewed_at": timezone.now()},
+        )
+
+        recent_items = (
+            RecentlyViewed.objects
+            .filter(user=request.user)
+            .order_by("-viewed_at")
+        )
+
+        if recent_items.count() > 10:
+            ids_to_delete = recent_items[10:].values_list("id", flat=True)
+            RecentlyViewed.objects.filter(id__in=ids_to_delete).delete()
+
+        return Response({"detail": "Recorded"}, status=status.HTTP_200_OK)
