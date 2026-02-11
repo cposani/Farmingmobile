@@ -12,6 +12,7 @@ from django.core.mail import send_mail, BadHeaderError
 from django.contrib.auth.models import User
 from django.db import transaction
 from django.contrib.auth.tokens import default_token_generator
+from requests import request
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status, permissions
@@ -27,8 +28,8 @@ def validate_password_policy(pwd: str) -> bool:
     # At least 8 chars, one uppercase, one number
     return bool(re.match(r"^(?=.*[A-Z])(?=.*\d).{8,}$", pwd or ""))
 
-def is_valid_phone(phone: str) -> bool:
-    return bool(re.fullmatch(r"[0-9+\-\s()]{7,20}", phone or ""))
+# def is_valid_phone(phone: str) -> bool:
+#     return bool(re.fullmatch(r"(\+91)?[0-9]{10}", phone or ""))
 
 User = get_user_model()
 
@@ -157,50 +158,7 @@ from rest_framework import status, permissions
 from rest_framework.authtoken.models import Token
 from django.contrib.auth.models import User
 from .models import Profile
-# login using authtoken
-# class LoginAPI(APIView):
-#     permission_classes = [permissions.AllowAny]
 
-#     def post(self, request):
-#         email = request.data.get("email")
-#         phone = request.data.get("phone")
-#         password = request.data.get("password")
-
-#         if not password or (not email and not phone):
-#             return Response({"error": "Email/Phone and password required"}, status=status.HTTP_400_BAD_REQUEST)
-
-#         user = None
-#         if email:
-#             user = User.objects.filter(email__iexact=email).first()
-#         elif phone:
-#             profile = Profile.objects.filter(phone=phone).first()
-#             if profile:
-#                 user = profile.user
-
-#         if not user:
-#             return Response({"error": "Invalid credentials"}, status=status.HTTP_400_BAD_REQUEST)
-
-#         user = authenticate(username=user.username, password=password)
-#         if not user:
-#             return Response({"error": "Invalid credentials"}, status=status.HTTP_400_BAD_REQUEST)
-#         if not user.is_active:
-#             return Response({"error": "Account not activated"}, status=status.HTTP_403_FORBIDDEN)
-
-#         # Return token
-#         token, _ = Token.objects.get_or_create(user=user)
-#         return Response({
-#             "message": "Login successful",
-#             "token": token.key,
-#             "user": {
-#                 "id": user.id,
-#                 "first_name": user.first_name,
-#                 "last_name": user.last_name,
-#                 "email": user.email,
-#                 "phone": user.profile.phone,
-#                 "user": UserSerializer(user).data,
-#             }
-#         })
-#------------
 #login using JWT
 from rest_framework_simplejwt.tokens import RefreshToken
 class LoginAPI(APIView):
@@ -390,3 +348,114 @@ class ResetPasswordAPI(APIView):
 
 
 
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from .serializers import ProfileUpdateSerializer, ProfileMeSerializer
+
+
+class ProfileUpdateView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def put(self, request):
+        profile = request.user.profile
+        user = request.user
+
+        # If email is included, update it here
+        new_email = request.data.get("email")
+        if new_email:
+            user.email = new_email
+            user.save()
+
+        serializer = ProfileUpdateSerializer(profile, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({
+                "first_name": user.first_name,
+                "last_name": user.last_name,
+                "email": user.email,
+                "phone": profile.phone,
+            })
+
+        return Response(serializer.errors, status=400)
+
+
+
+class ProfileMeView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        serializer = ProfileMeSerializer(request.user.profile)
+        return Response(serializer.data)
+    
+class ChangePasswordView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        user = request.user
+        current = request.data.get("current_password")
+        new = request.data.get("new_password")
+
+        if not user.check_password(current):
+            return Response({"error": "Current password is incorrect"}, status=400)
+
+        user.set_password(new)
+        user.save()
+
+        return Response({"message": "Password updated"})
+
+class RequestEmailChangeView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        new_email = request.data.get("email")
+
+        if not new_email:
+            return Response({"error": "Email required"}, status=400)
+
+        if User.objects.filter(email__iexact=new_email).exists():
+            return Response({"error": "Email already in use"}, status=400)
+
+        code = generate_otp()
+
+        PasswordResetOTP.objects.create(
+            user=request.user,
+            code=code,
+            purpose="email_change"
+        )
+
+        send_otp_email(
+            user=request.user,
+            code=code,
+            subject_prefix="Email Change Verification",
+            to_email=new_email
+        )
+
+        return Response({"message": "OTP sent to new email"})
+
+class ConfirmEmailChangeView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        otp_code = request.data.get("otp")
+        new_email = request.data.get("email")
+
+        otp = PasswordResetOTP.objects.filter(
+            user=request.user,
+            code=otp_code,
+            purpose="email_change",
+            used=False
+        ).last()
+
+        if not otp or not otp.is_valid():
+            return Response({"error": "Invalid or expired OTP"}, status=400)
+
+        otp.used = True
+        otp.save()
+
+        # Update email
+        user = request.user
+        user.email = new_email
+        user.save()
+
+        return Response({"message": "Email updated successfully"})
