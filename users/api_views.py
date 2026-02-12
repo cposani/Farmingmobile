@@ -519,8 +519,11 @@ def send_otp_email(user, code, subject_prefix="Verification", to_email=None):
         f"If you didn't request this, ignore this email."
     )
 
+    # If to_email is provided, send to that email
     recipient = to_email if to_email else user.email
+
     send_email(recipient, subject, message)
+
 
 # ---------------------------------------------------------
 # Registration
