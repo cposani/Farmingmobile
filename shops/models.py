@@ -181,13 +181,14 @@ class Product(models.Model):
         max_length=20,
         validators=[
             RegexValidator(
-                regex=r'^\+91\d{10}$',
-                message="Contact number must be in the format +91 followed by 10 digits.",
+                regex=r'^\+[1-9]\d{7,14}$',
+                message="Enter a valid international phone number in E.164 format (e.g., +14155552671).",
                 code="invalid_contact"
             )
         ],
-        help_text="Enter a valid phone number: +91 followed by 10 digits.",
+        help_text="Enter a valid phone number in E.164 format.",
     )
+
 
     seller_name = models.CharField(max_length=50, blank=True, null=True)
     seller = models.ForeignKey(User, on_delete=models.CASCADE, related_name="products")
