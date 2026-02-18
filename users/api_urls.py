@@ -1,5 +1,6 @@
 from django.urls import path
-from . import api_views
+from . import api_views 
+from .api_views import track_open
 from rest_framework_simplejwt.views import TokenRefreshView
 
 urlpatterns = [
@@ -18,6 +19,7 @@ urlpatterns = [
     path("profile/change-password/", api_views.ChangePasswordView.as_view()),
     path("profile/request-email-change/", api_views.RequestEmailChangeView.as_view()),
     path("profile/confirm-email-change/", api_views.ConfirmEmailChangeView.as_view()),
+    path("track-open/", track_open, name="track-open"),
 
 
 

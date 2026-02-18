@@ -160,7 +160,7 @@ class VerifyRegistrationOTPAPI(APIView):
 # ---------------------------------------------------------
 # Login
 # ---------------------------------------------------------
-
+from core.utils.activity import track_activity
 class LoginAPI(APIView):
     permission_classes = [permissions.AllowAny]
 
@@ -191,6 +191,9 @@ class LoginAPI(APIView):
             return Response({"error": "Account not activated"}, status=403)
 
         refresh = RefreshToken.for_user(user)
+        track_activity(user, "login")
+        user.last_login = timezone.now() 
+        user.save(update_fields=["last_login"])
         return Response({
             "message": "Login successful",
             "access": str(refresh.access_token),
@@ -398,3 +401,26 @@ class ConfirmEmailChangeView(APIView):
         user.save()
 
         return Response({"message": "Email updated successfully"})
+    
+
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from django.utils import timezone
+from .models import UserActivity
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def track_open(request):
+    user = request.user
+    today = timezone.now().date()
+
+    activity, created = UserActivity.objects.get_or_create(
+        user=user,
+        date=today
+    )
+
+    activity.opens_count += 1
+    activity.save()
+
+    return Response({"status": "ok"})

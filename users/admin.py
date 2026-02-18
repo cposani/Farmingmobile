@@ -4,7 +4,8 @@ from django.contrib import admin
 from django.contrib import admin
 from django.contrib.auth.models import User
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
-from .models import Profile
+from .models import Profile, UserActivity
+
 
 
 # Profile inline inside User admin
@@ -36,6 +37,11 @@ class UserAdmin(BaseUserAdmin):
     ordering = ("-date_joined",)
 
     inlines = (ProfileInline,)
+
+@admin.register(UserActivity)
+class UserActivityAdmin(admin.ModelAdmin):
+    list_display = ("user", "date", "opens_count", "logins_count")
+    list_filter = ("date", "user")
 
 
 # Replace default User admin

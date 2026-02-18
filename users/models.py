@@ -34,3 +34,24 @@ class PasswordResetOTP(models.Model):
 
     def is_valid(self, ttl_minutes=5):
         return (not self.used) and (timezone.now() <= self.created_at + timedelta(minutes=ttl_minutes))
+    
+
+from django.db import models
+from django.conf import settings
+from django.utils import timezone
+
+class UserActivity(models.Model):
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="activity"
+    )
+    date = models.DateField(default=timezone.now)
+    opens_count = models.PositiveIntegerField(default=0)
+    logins_count = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        unique_together = ("user", "date")
+
+    def __str__(self):
+        return f"{self.user.username} - {self.date}"
