@@ -47,20 +47,29 @@ class UserActivityAdmin(admin.ModelAdmin):
         "opens_count",
         "logins_count",
     )
+
+    # ✔ Search by username, email, first name, last name
+    search_fields = (
+        "user__username",
+        "user__email",
+        "user__first_name",
+        "user__last_name",
+    )
+
+    # ✔ Filter by date and user (real field)
     list_filter = ("date", "user")
 
     def user_account(self, obj):
-        # Show username or email (same as Products admin)
         return obj.user.username or obj.user.email
     user_account.short_description = "Seller (account)"
 
     def user_full_name(self, obj):
-        # Show actual seller name
         first = obj.user.first_name or ""
         last = obj.user.last_name or ""
         full = f"{first} {last}".strip()
         return full if full else "—"
     user_full_name.short_description = "Seller name"
+
 
 
 # Replace default User admin
