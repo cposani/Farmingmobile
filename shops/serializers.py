@@ -25,6 +25,7 @@ class ProductSerializer(serializers.ModelSerializer):
 
     # ⭐ Multi-image field
     images = ProductImageSerializer(many=True, read_only=True)
+    
 
     class Meta:
         model = Product
@@ -46,6 +47,8 @@ class ProductSerializer(serializers.ModelSerializer):
             "approved_by_name",
             "created_at",
             "updated_at",
+            "local_created_at",
+
         ]
         read_only_fields = [
             "id",
@@ -76,6 +79,12 @@ class ProductSerializer(serializers.ModelSerializer):
     # ---------------- CREATE PRODUCT ----------------
     def create(self, validated_data):
         user = self.context["request"].user
+
+        # local_created_at comes from frontend
+        local_time = self.context["request"].data.get("local_created_at") 
+        if local_time: 
+            validated_data["local_created_at"] = local_time
+
         validated_data["seller"] = user
 
         if user.is_staff:

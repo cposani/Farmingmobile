@@ -200,6 +200,8 @@ class Product(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    local_created_at = models.DateTimeField(null=True, blank=True)
+
 
     # ---------------------------------------------------------
     # ⭐ AUTO‑GEOCODE ON SAVE (Safe, Non‑Breaking)
