@@ -43,7 +43,7 @@ class ProductAdmin(admin.ModelAdmin):
 
     list_display_links = ("id", "name")
 
-    list_filter = ("status", "created_at", "seller")
+    list_filter = ("status", "created_at", "seller_name")
 
     search_fields = (
         "name",
